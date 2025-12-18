@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPBearer
 from database import get_database
 from utils.security import decode_access_token
 from models.user import User
@@ -10,7 +10,7 @@ security = HTTPBearer()
 
 
 async def get_current_user(
-    credentials: HTTPAuthCredentials = Depends(security)
+    token: str = Depends(security)
 ) -> User:
     """Get the current authenticated user from JWT token"""
     
@@ -20,7 +20,6 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    token = credentials.credentials
     payload = decode_access_token(token)
     
     if payload is None:
@@ -44,14 +43,14 @@ async def get_current_user(
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthCredentials] = Depends(security)
+    token: Optional[str] = Depends(security)
 ) -> Optional[User]:
     """Get the current user if authenticated, otherwise None"""
     
-    if credentials is None:
+    if token is None:
         return None
     
     try:
-        return await get_current_user(credentials)
+        return await get_current_user(token)
     except HTTPException:
         return None

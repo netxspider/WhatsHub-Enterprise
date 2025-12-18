@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from database import get_database
 from models.user import UserCreate, UserLogin, User, Token
 from utils.security import get_password_hash, verify_password, create_access_token
+from services.auth_service import get_current_user
 from datetime import datetime
 from bson import ObjectId
 
@@ -70,5 +71,4 @@ async def login(credentials: UserLogin):
 @router.get("/me", response_model=User)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information"""
-    from services.auth_service import get_current_user
     return current_user
