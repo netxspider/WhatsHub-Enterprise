@@ -1,32 +1,44 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/auth'
-import Link from 'next/link'
-import { LayoutDashboard, Users, MessageSquare, Send, FileText, LogOut } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-
-const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Contacts', href: '/contacts', icon: Users },
-    { name: 'Chat', href: '/chat', icon: MessageSquare },
-    { name: 'Campaigns', href: '/campaigns', icon: Send },
-    { name: 'Templates', href: '/templates', icon: FileText },
-]
+import { Sidebar, SidebarBody, SidebarLink } from '@/components/ui/sidebar'
+import {
+    IconLayoutDashboard,
+    IconUsers,
+    IconMessage,
+    IconSend,
+    IconFileText,
+    IconLogout,
+    IconSettings
+} from '@tabler/icons-react'
+import { motion } from 'motion/react'
+import { cn } from '@/lib/utils'
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const router = useRouter()
-    const { isAuthenticated, user, logout } = useAuthStore()
+    const { isAuthenticated, user, logout, token } = useAuthStore()
+    const [open, setOpen] = useState(false)
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/login')
-        }
-    }, [isAuthenticated, router])
+        // Small delay to allow Zustand to hydrate from localStorage
+        const timer = setTimeout(() => {
+            if (!isAuthenticated && !token) {
+                router.push('/login')
+            }
+        }, 100)
 
-    if (!isAuthenticated) {
-        return null
+        return () => clearTimeout(timer)
+    }, [isAuthenticated, token, router])
+
+    // Show loading while checking auth
+    if (!isAuthenticated && !token) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+            </div>
+        )
     }
 
     const handleLogout = () => {
@@ -34,68 +46,174 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         router.push('/login')
     }
 
+    const links = {
+        main: [
+            {
+                label: 'Dashboard',
+                href: '/dashboard',
+                icon: <IconLayoutDashboard className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            },
+            {
+                label: 'Contacts',
+                href: '/contacts',
+                icon: <IconUsers className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            },
+            {
+                label: 'Campaigns',
+                href: '/campaigns',
+                icon: <IconSend className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            }
+        ],
+        communication: [
+            {
+                label: 'Chats',
+                href: '/chat',
+                icon: <IconMessage className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            },
+            {
+                label: 'Status',
+                href: '/status',
+                icon: <IconUsers className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            },
+            {
+                label: 'Channels',
+                href: '/channels',
+                icon: <IconSend className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            },
+            {
+                label: 'Communities',
+                href: '/communities',
+                icon: <IconUsers className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            }
+        ],
+        settings: [
+            {
+                label: 'Templates',
+                href: '/templates',
+                icon: <IconFileText className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            },
+            {
+                label: 'Settings',
+                href: '/settings',
+                icon: <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+            }
+        ]
+    }
+
     return (
-        <div className="min-h-screen bg-gray-50">
-            {/* Sidebar */}
-            <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200">
-                <div className="flex flex-col h-full">
-                    {/* Logo */}
-                    <div className="h-16 flex items-center gap-3 px-6 border-b border-gray-200">
-                        <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center">
-                            <span className="text-white font-bold text-xl">W</span>
+        <div className="flex h-screen w-full overflow-hidden bg-gray-50 dark:bg-neutral-900">
+            <Sidebar open={open} setOpen={setOpen}>
+                <SidebarBody className="justify-between gap-10">
+                    <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
+                        {/* Logo */}
+                        {open ? <Logo /> : <LogoIcon />}
+
+                        {/* Navigation Links - Section 1 */}
+                        <div className="mt-8 flex flex-col gap-2">
+                            {links.main.map((link, idx) => (
+                                <SidebarLink key={idx} link={link} />
+                            ))}
                         </div>
-                        <div>
-                            <h1 className="text-lg font-bold text-gray-900">WhatsHub</h1>
-                            <p className="text-xs text-gray-500">Enterprise</p>
+
+                        {/* Separator */}
+                        <div className="my-4 border-t border-neutral-300 dark:border-neutral-700" />
+
+                        {/* Navigation Links - Section 2 */}
+                        <div className="flex flex-col gap-2">
+                            {links.communication.map((link, idx) => (
+                                <SidebarLink key={idx} link={link} />
+                            ))}
+                        </div>
+
+                        {/* Separator */}
+                        <div className="my-4 border-t border-neutral-300 dark:border-neutral-700" />
+
+                        {/* Navigation Links - Section 3 */}
+                        <div className="flex flex-col gap-2">
+                            {links.settings.map((link, idx) => (
+                                <SidebarLink key={idx} link={link} />
+                            ))}
                         </div>
                     </div>
 
-                    {/* Navigation */}
-                    <nav className="flex-1 px-3 py-4 space-y-1">
-                        {navigation.map((item) => (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors"
-                            >
-                                <item.icon className="w-5 h-5" />
-                                {item.name}
-                            </Link>
-                        ))}
-                    </nav>
-
-                    {/* User section */}
-                    <div className="p-4 border-t border-gray-200">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                <span className="text-green-700 font-semibold">
-                                    {user?.name.charAt(0).toUpperCase()}
-                                </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
-                                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                            </div>
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
+                    {/* User Profile & Logout */}
+                    <div>
+                        <SidebarLink
+                            link={{
+                                label: user?.name || 'User',
+                                href: '#',
+                                icon: (
+                                    <div className="h-7 w-7 shrink-0 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                                        <span className="text-white font-semibold text-sm">
+                                            {user?.name?.charAt(0).toUpperCase() || 'U'}
+                                        </span>
+                                    </div>
+                                )
+                            }}
+                        />
+                        <button
                             onClick={handleLogout}
+                            className="flex items-center justify-start gap-3 group/sidebar py-2 px-2 w-full rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
                         >
-                            <LogOut className="w-4 h-4 mr-2" />
-                            Logout
-                        </Button>
+                            <IconLogout className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                            <motion.span
+                                animate={{
+                                    display: open ? "inline-block" : "none",
+                                    opacity: open ? 1 : 0,
+                                }}
+                                className="text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+                            >
+                                Logout
+                            </motion.span>
+                        </button>
                     </div>
-                </div>
-            </aside>
+                </SidebarBody>
+            </Sidebar>
 
-            {/* Main content */}
-            <div className="pl-64">
-                <main className="p-6">
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-auto">
+                <div className="h-full w-full bg-white dark:bg-neutral-900">
                     {children}
-                </main>
+                </div>
             </div>
         </div>
+    )
+}
+
+const Logo = () => {
+    return (
+        <a
+            href="/dashboard"
+            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black dark:text-white"
+        >
+            <div className="h-8 w-8 shrink-0 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">W</span>
+            </div>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col"
+            >
+                <span className="font-bold text-base whitespace-pre text-black dark:text-white">
+                    WhatsHub
+                </span>
+                <span className="text-xs text-neutral-600 dark:text-neutral-400">
+                    Enterprise
+                </span>
+            </motion.div>
+        </a>
+    )
+}
+
+const LogoIcon = () => {
+    return (
+        <a
+            href="/dashboard"
+            className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black dark:text-white"
+        >
+            <div className="h-8 w-8 shrink-0 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">W</span>
+            </div>
+        </a>
     )
 }
