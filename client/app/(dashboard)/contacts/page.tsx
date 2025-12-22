@@ -124,12 +124,14 @@ export default function ContactsPage() {
         return name.split(' ').map(n => n[0]).join('').toUpperCase()
     }
 
-    const getAvatarColor = (id: number) => {
+    const getAvatarColor = (id: string) => {
         const colors = [
             'bg-blue-500', 'bg-green-500', 'bg-purple-500',
             'bg-pink-500', 'bg-yellow-500', 'bg-indigo-500'
         ]
-        return colors[id % colors.length]
+        // Simple hash of string to number
+        const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        return colors[hash % colors.length]
     }
 
     return (
@@ -457,7 +459,7 @@ export default function ContactsPage() {
                                 <div>
                                     <h3 className="text-sm font-semibold text-gray-500 mb-3">Activity Timeline</h3>
                                     <div className="space-y-3">
-                                        {selectedContact.activity.map((item, idx) => (
+                                        {selectedContact.activity?.map((item, idx) => (
                                             <div key={idx} className="flex gap-3 text-sm">
                                                 <div className="h-2 w-2 rounded-full bg-green-500 mt-1.5"></div>
                                                 <span className="text-gray-600 dark:text-gray-300">{item}</span>

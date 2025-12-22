@@ -6,7 +6,7 @@ import { Moon, Sun } from 'lucide-react'
 import { motion } from 'motion/react'
 
 interface ThemeTogglerProps {
-    variant?: 'button' | 'toggle' | 'icon'
+    variant?: 'button' | 'toggle' | 'icon' | 'switch'
 }
 
 export default function ThemeToggler({ variant = 'button' }: ThemeTogglerProps) {
@@ -41,7 +41,7 @@ export default function ThemeToggler({ variant = 'button' }: ThemeTogglerProps) 
     }
 
     // Toggle variant - for compact display
-    if (variant === 'toggle') {
+    if (variant === 'toggle' || variant === 'switch') {
         return (
             <button
                 onClick={toggleTheme}

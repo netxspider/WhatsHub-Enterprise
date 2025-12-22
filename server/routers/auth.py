@@ -154,7 +154,7 @@ async def google_callback(code: str):
         
         # Redirect to frontend with token
         return RedirectResponse(
-            url=f"http://localhost:3000/auth/callback?token={access_token}",
+            url=f"{settings.frontend_url}/auth/callback?token={access_token}",
             status_code=302
         )
     
