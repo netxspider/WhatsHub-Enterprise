@@ -1,245 +1,270 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '@/lib/api'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect } from 'react'
+import AnimatedList, { AnimatedItem } from '@/components/AnimatedList'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Send, Users, Eye, Check } from 'lucide-react'
-import { toast } from 'sonner'
-import { Campaign } from '@/types'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Plus, TrendingUp, Calendar, BarChart3, MoreVertical, FileSpreadsheet, Users as UsersIcon } from 'lucide-react'
+import { api } from '@/lib/api'
+import { CampaignWizard } from '@/components/campaigns/CampaignWizard'
+
+interface Campaign {
+    id: string
+    name: string
+    status: 'draft' | 'active' | 'completed' | 'paused'
+    total_contacts: number
+    delivered_count: number
+    read_count: number
+    created_at: string
+}
 
 export default function CampaignsPage() {
-    const queryClient = useQueryClient()
-    const [isCreateOpen, setIsCreateOpen] = useState(false)
-    const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null)
+    const [campaigns, setCampaigns] = useState<Campaign[]>([])
+    const [loading, setLoading] = useState(true)
+    const [wizardOpen, setWizardOpen] = useState(false)
 
-    const { data: campaigns, isLoading } = useQuery({
-        queryKey: ['campaigns'],
-        queryFn: () => api.getCampaigns(),
-    })
+    useEffect(() => {
+        fetchCampaigns()
+    }, [])
 
-    const { data: templates } = useQuery({
-        queryKey: ['templates'],
-        queryFn: () => api.getTemplates(),
-    })
-
-    const createCampaignMutation = useMutation({
-        mutationFn: (data: any) => api.createCampaign(data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['campaigns'] })
-            setIsCreateOpen(false)
-            toast.success('Campaign created successfully! Messages are being sent.')
-        },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.detail || 'Failed to create campaign')
-        },
-    })
-
-    const handleCreateCampaign = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
-        const formData = new FormData(e.currentTarget)
-
-        const data: any = {
-            name: formData.get('name'),
-            sheet_url: formData.get('sheet_url'),
-            sheet_name: formData.get('sheet_name') || undefined,
-        }
-
-        const templateId = formData.get('template_id')
-        if (templateId && templateId !== 'none') {
-            data.template_id = templateId
-
-            // Get template parameters
-            const template = templates?.find((t: { _id: string }) => t._id === templateId)
-            if (template) {
-                const parameters: Record<string, string> = {}
-                template.parameters.forEach((param: { name: string }, index: number) => {
-                    const value = formData.get(`param_${index}`)
-                    if (value) {
-                        parameters[param.name] = value as string
-                    }
-                })
-                data.template_parameters = parameters
+    const fetchCampaigns = async () => {
+        try {
+            const data = await api.getCampaigns()
+            setCampaigns(data)
+        } catch (error: any) {
+            console.error('Failed to fetch campaigns:', error)
+            // If auth error, it will auto-redirect via interceptor
+            // For other errors, show empty state
+            if (error?.response?.status !== 401) {
+                setCampaigns([])
             }
+        } finally {
+            setLoading(false)
         }
-
-        createCampaignMutation.mutate(data)
     }
 
-    const getStatusColor = (status: string) => {
+    const calculateStats = () => {
+        const total = campaigns.length
+        const thisMonth = campaigns.filter(c => {
+            const createdDate = new Date(c.created_at)
+            const now = new Date()
+            return createdDate.getMonth() === now.getMonth() &&
+                createdDate.getFullYear() === now.getFullYear()
+        }).length
+
+        const totalDelivered = campaigns.reduce((sum, c) => sum + c.delivered_count, 0)
+        const totalContacts = campaigns.reduce((sum, c) => sum + c.total_contacts, 0)
+        const avgReadRate = totalContacts > 0
+            ? Math.round((campaigns.reduce((sum, c) => sum + c.read_count, 0) / totalContacts) * 100)
+            : 0
+
+        return { total, thisMonth, avgReadRate }
+    }
+
+    const stats = calculateStats()
+
+    const getCampaignProgress = (campaign: Campaign) => {
+        if (campaign.total_contacts === 0) return 0
+        return Math.round((campaign.delivered_count / campaign.total_contacts) * 100)
+    }
+
+    const getReadRate = (campaign: Campaign) => {
+        if (campaign.delivered_count === 0) return 0
+        return Math.round((campaign.read_count / campaign.delivered_count) * 100)
+    }
+
+    const getStatusBadge = (status: string) => {
         switch (status) {
             case 'active':
-                return 'bg-blue-500'
+                return <Badge className="bg-yellow-100 text-yellow-800">🟡 Processing</Badge>
             case 'completed':
-                return 'bg-green-500'
-            case 'paused':
-                return 'bg-yellow-500'
+                return <Badge className="bg-green-100 text-green-800">🟢 Completed</Badge>
+            case 'draft':
+                return <Badge variant="secondary">⚪ Draft</Badge>
             default:
-                return 'bg-gray-500'
+                return <Badge variant="secondary">{status}</Badge>
         }
+    }
+
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString)
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     }
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Campaigns</h1>
-                    <p className="text-gray-500">Manage your WhatsApp marketing campaigns</p>
-                </div>
-                <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="bg-green-600 hover:bg-green-700">
-                            <Plus className="w-4 h-4 mr-2" />
-                            New Campaign
+        <div className="p-3 md:p-6 space-y-4 md:space-y-6">
+            {/* Header with Stats */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Marketing Campaigns</h1>
+                        <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mt-1">Create and manage your WhatsApp campaigns</p>
+                    </div>
+
+                    {/* Mobile: + Icon Button */}
+                    <div className="md:hidden">
+                        <Button
+                            size="icon"
+                            className="h-10 w-10 rounded-full bg-green-600 hover:bg-green-700"
+                            onClick={() => setWizardOpen(true)}
+                        >
+                            <Plus className="h-5 w-5" />
                         </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                            <DialogTitle>Create New Campaign</DialogTitle>
-                            <DialogDescription>
-                                Import contacts from Google Sheets and send bulk messages
-                            </DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleCreateCampaign} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Campaign Name</Label>
-                                <Input id="name" name="name" placeholder="Diwali Sale 2024" required />
-                            </div>
+                    </div>
+                </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="sheet_url">Google Sheet URL</Label>
-                                <Input
-                                    id="sheet_url"
-                                    name="sheet_url"
-                                    placeholder="https://docs.google.com/spreadsheets/d/..."
-                                    required
-                                />
-                                <p className="text-xs text-gray-500">
-                                    Make sure the sheet is shared with your service account or is public
-                                </p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="sheet_name">Sheet Name (Optional)</Label>
-                                <Input
-                                    id="sheet_name"
-                                    name="sheet_name"
-                                    placeholder="Sheet1"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="template_id">Template (Optional)</Label>
-                                <Select name="template_id" defaultValue="none">
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a template" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">No template</SelectItem>
-                                        {templates?.map((template: { _id: string; name: string }) => (
-                                            <SelectItem key={template._id} value={template._id}>
-                                                {template.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="flex justify-end gap-2">
-                                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
-                                    Cancel
-                                </Button>
-                                <Button type="submit" className="bg-green-600 hover:bg-green-700" disabled={createCampaignMutation.isPending}>
-                                    {createCampaignMutation.isPending ? 'Creating...' : 'Create Campaign'}
-                                </Button>
-                            </div>
-                        </form>
-                    </DialogContent>
-                </Dialog>
+                {/* Desktop: Full Button */}
+                <Button
+                    className="hidden md:flex bg-green-600 hover:bg-green-700"
+                    size="lg"
+                    onClick={() => setWizardOpen(true)}
+                >
+                    <Plus className="mr-2 h-5 w-5" />
+                    New Campaign
+                </Button>
             </div>
 
-            {/* Campaigns Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {isLoading ? (
+            {/* Quick Stats - 2 columns on mobile, 3 on desktop */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">All Campaigns</CardTitle>
+                        <BarChart3 className="h-5 w-5 text-blue-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold">{stats.total}</div>
+                        <p className="text-xs text-gray-500 mt-1">Total campaigns created</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">This Month</CardTitle>
+                        <Calendar className="h-5 w-5 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold">{stats.thisMonth}</div>
+                        <p className="text-xs text-gray-500 mt-1">Campaigns started this month</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg. Read Rate</CardTitle>
+                        <TrendingUp className="h-5 w-5 text-purple-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold">{stats.avgReadRate}%</div>
+                        <p className="text-xs text-gray-500 mt-1">Average across all campaigns</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Campaign Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                {loading ? (
                     <div className="col-span-full text-center py-12 text-gray-500">
                         Loading campaigns...
                     </div>
-                ) : campaigns && campaigns.length > 0 ? (
-                    campaigns.map((campaign: Campaign) => (
-                        <Card key={campaign._id} className="hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        <CardTitle className="text-lg">{campaign.name}</CardTitle>
-                                        <CardDescription className="mt-1">
-                                            {new Date(campaign.created_at).toLocaleDateString()}
-                                        </CardDescription>
-                                    </div>
-                                    <Badge className={getStatusColor(campaign.status)}>
-                                        {campaign.status}
-                                    </Badge>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid grid-cols-3 gap-4 text-center">
-                                    <div>
-                                        <div className="flex items-center justify-center mb-1">
-                                            <Users className="w-4 h-4 text-gray-400" />
-                                        </div>
-                                        <div className="text-2xl font-bold">{campaign.total_contacts}</div>
-                                        <div className="text-xs text-gray-500">Contacts</div>
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center justify-center mb-1">
-                                            <Send className="w-4 h-4 text-gray-400" />
-                                        </div>
-                                        <div className="text-2xl font-bold">{campaign.delivered_count}</div>
-                                        <div className="text-xs text-gray-500">Delivered</div>
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center justify-center mb-1">
-                                            <Eye className="w-4 h-4 text-gray-400" />
-                                        </div>
-                                        <div className="text-2xl font-bold">{campaign.read_count}</div>
-                                        <div className="text-xs text-gray-500">Read</div>
-                                    </div>
-                                </div>
-
-                                {campaign.total_contacts > 0 && (
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between text-xs text-gray-500">
-                                            <span>Delivery Progress</span>
-                                            <span>{Math.round((campaign.delivered_count / campaign.total_contacts) * 100)}%</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-2">
-                                            <div
-                                                className="bg-green-600 h-2 rounded-full transition-all"
-                                                style={{ width: `${(campaign.delivered_count / campaign.total_contacts) * 100}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    ))
-                ) : (
+                ) : campaigns.length === 0 ? (
                     <div className="col-span-full text-center py-12">
-                        <Send className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-700 mb-2">No campaigns yet</h3>
-                        <p className="text-gray-500 mb-4">Create your first campaign to start sending messages</p>
-                        <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsCreateOpen(true)}>
-                            <Plus className="w-4 h-4 mr-2" />
+                        <FileSpreadsheet className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">No campaigns yet</h3>
+                        <p className="text-gray-500 mt-2">Create your first campaign to get started</p>
+                        <Button
+                            className="mt-4 bg-green-600 hover:bg-green-700"
+                            onClick={() => setWizardOpen(true)}
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
                             Create Campaign
                         </Button>
                     </div>
+                ) : (
+                    campaigns.map((campaign, index) => {
+                        const progress = getCampaignProgress(campaign)
+                        const readRate = getReadRate(campaign)
+
+                        return (
+                            <AnimatedItem key={campaign.id} index={index} delay={0.05}>
+                                <Card className="hover:shadow-lg transition-shadow h-full">
+                                    <CardHeader>
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <CardTitle className="text-lg">{campaign.name}</CardTitle>
+                                                <p className="text-sm text-gray-500 mt-1">{formatDate(campaign.created_at)}</p>
+                                            </div>
+                                            <Button variant="ghost" size="sm">
+                                                <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        {getStatusBadge(campaign.status)}
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {/* Progress Bar */}
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm font-medium">Progress</span>
+                                                <span className="text-sm text-gray-600">{campaign.delivered_count} / {campaign.total_contacts} Sent</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                                                <div
+                                                    className="bg-gradient-to-r from-green-500 to-emerald-500 h-2.5 rounded-full transition-all duration-500"
+                                                    style={{ width: `${progress}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">{progress}% Complete</p>
+                                        </div>
+
+                                        {/* Metrics */}
+                                        <div className="grid grid-cols-3 gap-2 pt-3 border-t">
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-green-600">{progress}%</div>
+                                                <div className="text-xs text-gray-500">Delivered</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-blue-600">{readRate}%</div>
+                                                <div className="text-xs text-gray-500">Read</div>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-lg font-bold text-purple-600">0%</div>
+                                                <div className="text-xs text-gray-500">Replied</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex gap-2 pt-2">
+                                            <Button variant="outline" size="sm" className="flex-1">
+                                                View Report
+                                            </Button>
+                                            <Button variant="outline" size="sm" className="flex-1">
+                                                Duplicate
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </AnimatedItem>
+                        )
+                    })
                 )}
             </div>
+
+            {/* Campaign Wizard Modal */}
+            {
+                wizardOpen && (
+                    <CampaignWizard
+                        isOpen={wizardOpen}
+                        onClose={() => setWizardOpen(false)}
+                        onSuccess={fetchCampaigns}
+                    />
+                )
+            }
         </div>
     )
 }

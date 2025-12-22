@@ -63,15 +63,60 @@ export default function DashboardPage() {
     }, [])
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="p-3 md:p-6 space-y-4 md:space-y-6">
             {/* Page Header */}
             <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">Welcome back! Here's what's happening with your campaigns.</p>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+                <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mt-1">Welcome back! Here's what's happening with your campaigns.</p>
             </div>
 
-            {/* KPI Cards - Top Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Mobile KPI Cards - 2x2 Grid - Clean Minimal Design */}
+            <div className="lg:hidden">
+                <div className="grid grid-cols-2 gap-4">
+                    {/* Total Contacts */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Total Contacts</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{totalContacts.toLocaleString()}</p>
+                        <div className="flex items-center gap-1 text-green-600">
+                            <TrendingUp className="h-3 w-3" />
+                            <span className="text-xs font-medium">+3.45%</span>
+                        </div>
+                    </div>
+
+                    {/* Messages Sent */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Messages Sent</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{messagesSent.toLocaleString()}</p>
+                        <div className="flex items-center gap-1 text-green-600">
+                            <TrendingUp className="h-3 w-3" />
+                            <span className="text-xs font-medium">+12.45%</span>
+                        </div>
+                    </div>
+
+                    {/* Active Campaigns */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Active Campaigns</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">3</p>
+                        <div className="flex items-center gap-1 text-green-600">
+                            <TrendingUp className="h-3 w-3" />
+                            <span className="text-xs font-medium">+50%</span>
+                        </div>
+                    </div>
+
+                    {/* Response Rate */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Response Rate</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">24%</p>
+                        <div className="flex items-center gap-1 text-green-600">
+                            <TrendingUp className="h-3 w-3" />
+                            <span className="text-xs font-medium">+8.2%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Desktop KPI Cards - Original Layout */}
+            <div className="hidden lg:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Total Contacts */}
                 <Card className="relative overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -132,11 +177,11 @@ export default function DashboardPage() {
                 </Card>
             </div>
 
-            {/* Charts - Middle Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Charts - Responsive: Single column on mobile, 3 columns on desktop */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                 {/* Message Volume Chart */}
                 <Card className="lg:col-span-2">
-                    <CardHeader>
+                    <CardHeader className="p-4 md:p-6">
                         <CardTitle>Message Volume (Last 7 Days)</CardTitle>
                         <CardDescription>Track your messaging performance over time</CardDescription>
                     </CardHeader>
@@ -205,7 +250,7 @@ export default function DashboardPage() {
                 </Card>
             </div>
 
-            {/* Bottom Row */}
+            {/* Bottom Row - Activity Feed & Quick Actions - Stack on mobile, side-by-side on desktop */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Recent Activity Feed */}
                 <Card className="lg:col-span-2">
@@ -214,11 +259,11 @@ export default function DashboardPage() {
                         <CardDescription>Latest updates from your campaigns</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
+                        <div className="divide-y divide-gray-200 dark:divide-gray-700">
                             {activities.map((activity) => {
                                 const Icon = activity.icon
                                 return (
-                                    <div key={activity.id} className="flex items-start gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                    <div key={activity.id} className="flex items-start gap-4 py-3 first:pt-0 last:pb-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors rounded-lg px-2 -mx-2">
                                         <div className={`
                       p-2 rounded-full
                       ${activity.type === 'message' ? 'bg-blue-100 dark:bg-blue-900' : ''}

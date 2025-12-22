@@ -37,6 +37,22 @@ class Template(BaseModel):
         populate_by_name = True
 
 
+class TemplateCreate(BaseModel):
+    """Template creation model"""
+    name: str
+    category: TemplateCategory
+    content: str
+    parameters: List[TemplateParameter] = []
+
+
+class TemplateUpdate(BaseModel):
+    """Template update model"""
+    name: str = None
+    category: TemplateCategory = None
+    content: str = None
+    parameters: List[TemplateParameter] = None
+
+
 class TemplateInDB(Template):
     """Template model as stored in database"""
     pass

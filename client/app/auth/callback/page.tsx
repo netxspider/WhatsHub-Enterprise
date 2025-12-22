@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/store/auth'
 import { api } from '@/lib/api'
@@ -10,8 +10,14 @@ export default function AuthCallbackPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const { setToken, setUser } = useAuthStore()
+    const processedRef = useRef(false)
 
     useEffect(() => {
+        // Prevent multiple executions
+        if (processedRef.current) {
+            return
+        }
+
         const handleCallback = async () => {
             const token = searchParams.get('token')
 
@@ -22,6 +28,9 @@ export default function AuthCallbackPage() {
             }
 
             try {
+                // Mark as processed before async operations
+                processedRef.current = true
+
                 // Set token
                 setToken(token)
 
@@ -32,19 +41,17 @@ export default function AuthCallbackPage() {
                 toast.success(`Welcome, ${user.name}!`)
 
                 // Redirect to dashboard
-                setTimeout(() => {
-                    router.push('/dashboard')
-                    router.refresh()
-                }, 100)
+                router.replace('/dashboard')
             } catch (error: any) {
                 console.error('OAuth callback error:', error)
+                processedRef.current = false // Reset on error
                 toast.error('Failed to complete authentication. Please try again.')
                 router.push('/login')
             }
         }
 
         handleCallback()
-    }, [searchParams, router, setToken, setUser])
+    }, []) // Empty dependency array - only run once on mount
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">

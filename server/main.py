@@ -5,7 +5,8 @@ import logging
 
 from config import settings
 from database import connect_to_mongo, close_mongo_connection
-from routers import auth, contacts, chat, campaigns, templates, sheets
+from routers import auth, contacts, chat, campaigns, templates, sheets, channels, communities, profile, settings as settings_router, status
+
 
 # Configure logging
 logging.basicConfig(
@@ -51,6 +52,11 @@ app.include_router(chat.router)
 app.include_router(campaigns.router)
 app.include_router(templates.router)
 app.include_router(sheets.router)
+app.include_router(channels.router)
+app.include_router(communities.router)
+app.include_router(profile.router)
+app.include_router(settings_router.router)
+app.include_router(status.router)
 
 
 @app.get("/")

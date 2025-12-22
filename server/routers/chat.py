@@ -47,9 +47,8 @@ async def get_chat_threads(
     
     db = get_database()
     
-    cursor = db.chat_threads.find({
-        "user_id": current_user.id
-    }).sort("updated_at", -1).limit(limit)
+    # Removed user_id filter for demo (all users see all chats)
+    cursor = db.chat_threads.find({}).sort("updated_at", -1).limit(limit)
     
     threads = await cursor.to_list(length=limit)
     
@@ -57,6 +56,26 @@ async def get_chat_threads(
     result = []
     for thread in threads:
         thread["_id"] = str(thread["_id"])
+        
+        # Skip threads with invalid contact_id
+        contact_id = thread.get("contact_id")
+        if not contact_id or contact_id == "undefined":
+            continue
+        
+        # Enrich with contact name and phone
+        try:
+            contact = await db.contacts.find_one({"_id": ObjectId(contact_id)})
+            if contact:
+                thread["contact_name"] = contact.get("name", "Unknown")
+                thread["contact_phone"] = contact.get("phone", "")
+            else:
+                thread["contact_name"] = "Unknown Contact"
+                thread["contact_phone"] = ""
+        except Exception as e:
+            # Handle invalid ObjectId or other errors
+            thread["contact_name"] = "Unknown Contact"
+            thread["contact_phone"] = ""
+        
         result.append(ChatThread(**thread))
     
     return result

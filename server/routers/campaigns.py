@@ -175,9 +175,8 @@ async def get_campaigns(
     
     db = get_database()
     
-    cursor = db.campaigns.find({
-        "user_id": current_user.id
-    }).sort("created_at", -1).limit(limit)
+    # Removed user_id filter for demo (all users see all campaigns)
+    cursor = db.campaigns.find({}).sort("created_at", -1).limit(limit)
     
     campaigns = await cursor.to_list(length=limit)
     

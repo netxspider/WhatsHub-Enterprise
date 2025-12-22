@@ -1,24 +1,30 @@
 from pydantic_settings import BaseSettings
 from typing import List
+from functools import lru_cache
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
     # MongoDB
-    mongodb_url: str = "mongodb://localhost:27017"
-    database_name: str = "whatshub_enterprise"
+    mongodb_url: str
+    database_name: str
     
-    # JWT
-    secret_key: str = "your-secret-key-change-this-in-production"
+    # Security
+    secret_key: str
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
     # Google Sheets
-    google_service_account_file: str = "service-account.json"
+    google_service_account_file: str
     
     # CORS
     cors_origins: str = "http://localhost:3000"
+    
+    # Google OAuth
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/auth/google/callback"
     
     @property
     def cors_origins_list(self) -> List[str]:
@@ -30,4 +36,9 @@ class Settings(BaseSettings):
         case_sensitive = False
 
 
-settings = Settings()
+@lru_cache()
+def get_settings():
+    return Settings()
+
+
+settings = get_settings()

@@ -64,18 +64,22 @@ class APIClient {
         return response.data
     }
 
-    async createContact(data: { name: string; phone: string; tags?: string[]; source?: string }) {
+    async createContact(data: { name: string; phone: string; email?: string; tags?: string[]; source?: string }) {
         const response = await this.client.post('/contacts/', data)
         return response.data
     }
 
-    async updateContact(id: string, data: { name?: string; phone?: string; tags?: string[] }) {
+    async updateContact(id: string, data: { name?: string; phone?: string; email?: string; tags?: string[] }) {
         const response = await this.client.put(`/contacts/${id}`, data)
         return response.data
     }
 
     async deleteContact(id: string) {
         await this.client.delete(`/contacts/${id}`)
+    }
+
+    async deleteMessage(id: string) {
+        await this.client.delete(`/chat/messages/${id}`)
     }
 
     async getAllTags() {
@@ -158,6 +162,65 @@ class APIClient {
             params: { sheet_url: sheetUrl, sheet_name: sheetName }
         })
         return response.data
+    }
+
+    // Profile
+    async getProfile() {
+        const response = await this.client.get('/profile/')
+        return response.data
+    }
+
+    async updateProfile(data: any) {
+        const response = await this.client.put('/profile/', data)
+        return response.data
+    }
+
+    // Settings
+    async getSettings() {
+        const response = await this.client.get('/settings/')
+        return response.data
+    }
+
+    async updateSettings(data: any) {
+        const response = await this.client.put('/settings/', data)
+        return response.data
+    }
+
+    // Status
+    async getStatuses() {
+        const response = await this.client.get('/status/')
+        return response.data
+    }
+
+    async getStatus(id: string) {
+        const response = await this.client.get(`/status/${id}`)
+        return response.data
+    }
+
+    async createStatus(data: { content: string; media_url?: string; media_type?: string }) {
+        const response = await this.client.post('/status/', data)
+        return response.data
+    }
+
+    async deleteStatus(id: string) {
+        await this.client.delete(`/status/${id}`)
+    }
+
+    // Generic methods for flexible endpoint access
+    async get(url: string, config?: any) {
+        return await this.client.get(url, config)
+    }
+
+    async post(url: string, data?: any, config?: any) {
+        return await this.client.post(url, data, config)
+    }
+
+    async put(url: string, data?: any, config?: any) {
+        return await this.client.put(url, data, config)
+    }
+
+    async delete(url: string, config?: any) {
+        return await this.client.delete(url, config)
     }
 }
 

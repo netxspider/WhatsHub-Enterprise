@@ -31,6 +31,8 @@ class ChatThread(BaseModel):
     id: str = Field(alias="_id")
     contact_id: str
     user_id: str
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
     last_message: Optional[str] = None
     unread_count: int = 0
     updated_at: datetime
