@@ -19,7 +19,7 @@ import { toast } from 'sonner'
 
 interface ImportSheetsDialogProps {
     open: boolean
-    onOpen Change: (open: boolean) => void
+    onOpenChange: (open: boolean) => void
     onSuccess: () => void
 }
 
