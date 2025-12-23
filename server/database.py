@@ -9,31 +9,40 @@ mongodb_client: AsyncIOMotorClient = None
 mongodb: AsyncIOMotorDatabase = None
 
 
-async def connect_to_mongo():
-    """Connect to MongoDB and initialize database"""
+async def get_database() -> AsyncIOMotorDatabase:
+    """Get database connection, creating it if necessary (serverless-friendly)"""
     global mongodb_client, mongodb
     
-    try:
-        logger.info(f"Connecting to MongoDB at {settings.mongodb_url}")
-        # Initialize client with connection pooling
-        mongodb_client = AsyncIOMotorClient(
-            settings.mongodb_url,
-            maxPoolSize=50,  # Maximum number of concurrent connections
-            minPoolSize=10,  # Minimum connections to maintain in pool
-            maxIdleTimeMS=45000  # Maximum idle time before connection is closed
-        )
-        mongodb = mongodb_client[settings.database_name]
-        
-        # Test connection
-        await mongodb_client.admin.command('ping')
-        logger.info(f"Successfully connected to MongoDB database: {settings.database_name}")
-        
-        # Create indexes
-        await create_indexes()
-        
-    except Exception as e:
-        logger.error(f"Failed to connect to MongoDB: {e}")
-        raise
+    if mongodb is None:
+        try:
+            logger.info(f"Connecting to MongoDB at {settings.mongodb_url}")
+            # Initialize client with connection pooling optimized for serverless
+            mongodb_client = AsyncIOMotorClient(
+                settings.mongodb_url,
+                maxPoolSize=10,  # Lower for serverless
+                minPoolSize=1,   # Minimal pool for serverless
+                maxIdleTimeMS=10000,  # Shorter idle time for serverless
+                serverSelectionTimeoutMS=5000  # Faster timeout
+            )
+            mongodb = mongodb_client[settings.database_name]
+            
+            # Test connection
+            await mongodb_client.admin.command('ping')
+            logger.info(f"Successfully connected to MongoDB database: {settings.database_name}")
+            
+        except Exception as e:
+            logger.error(f"Failed to connect to MongoDB: {e}")
+            raise
+    
+    return mongodb
+
+
+async def connect_to_mongo():
+    """Connect to MongoDB and initialize database"""
+    global mongodb
+    mongodb = await get_database()
+    # Create indexes
+    await create_indexes()
 
 
 async def close_mongo_connection():
